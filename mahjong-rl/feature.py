@@ -320,7 +320,11 @@ class FeatureAgent(MahjongGBAgent):
         for tile in d:
             self.obs[self.OFFSET_OBS['HAND'] : self.OFFSET_OBS['HAND'] + d[tile], self.OFFSET_TILE[tile]] = 1
     
-    def _check_mahjong(self, winTile, isSelfDrawn = False, isAboutKong = False):
+    def _check_mahjong(self, winTile, isSelfDrawn = False, isAboutKong = False, minFan = 0):
+        """
+        检查是否可以胡牌
+        minFan: 最小番数要求，默认0（无限制），国标麻将通常设为8
+        """
         try:
             fans = MahjongFanCalculator(
                 pack = tuple(self.packs[0]),
@@ -338,7 +342,7 @@ class FeatureAgent(MahjongGBAgent):
             fanCnt = 0
             for fanPoint, cnt, fanName, fanNameEn in fans:
                 fanCnt += fanPoint * cnt
-            if fanCnt < 8: raise Exception('Not Enough Fans')
+            if fanCnt < minFan: raise Exception('Not Enough Fans')
         except:
             return False
         return True

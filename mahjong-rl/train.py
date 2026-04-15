@@ -5,27 +5,51 @@ from actor import Actor
 from learner import Learner
 
 if __name__ == '__main__':
+    # config = {
+    #     'replay_buffer_size': 50000,
+    #     'replay_buffer_episode': 400,
+    #     'model_pool_size': 20,
+    #     'model_pool_name': 'model-pool',
+    #     'num_actors': 24,
+    #     'episodes_per_actor': 1000,
+    #     'gamma': 0.98,
+    #     'lambda': 0.95,
+    #     'min_sample': 200,
+    #     'batch_size': 256,
+    #     'epochs': 5,
+    #     'clip': 0.2,
+    #     'lr': 1e-4,
+    #     'value_coeff': 1,
+    #     'entropy_coeff': 0.01,
+    #     'device': 'cuda',
+    #     'ckpt_save_interval': 300,
+    #     'ckpt_save_path': '/model/'
+    # }
+
     config = {
-        'replay_buffer_size': 50000,
-        'replay_buffer_episode': 400,
-        'model_pool_size': 20,
-        'model_pool_name': 'model-pool',
-        'num_actors': 24,
-        'episodes_per_actor': 1000,
+        'replay_buffer_size': 5000,      # 减小缓冲区
+        'replay_buffer_episode': 40,
+        'model_pool_size': 5,
+        'model_pool_name': 'model-pool-test',
+        'num_actors': 4,                  # 减少 Actor 数量
+        'episodes_per_actor': 100,
         'gamma': 0.98,
         'lambda': 0.95,
-        'min_sample': 200,
-        'batch_size': 256,
+        'min_sample': 50,
+        'batch_size': 64,
         'epochs': 5,
         'clip': 0.2,
         'lr': 1e-4,
         'value_coeff': 1,
         'entropy_coeff': 0.01,
-        'device': 'cuda',
+        'device': 'cpu',                  # 使用 CPU
         'ckpt_save_interval': 300,
-        'ckpt_save_path': '/model/'
+        'ckpt_save_path': './model-test/', # 本地路径
+        'max_iterations': 100000,          # 最大训练轮数
+        'save_interval': 1000               # 每100轮保存一次
     }
-    
+
+
     replay_buffer = ReplayBuffer(config['replay_buffer_size'], config['replay_buffer_episode'])
     
     actors = []
