@@ -8,8 +8,12 @@ import torch
 import os
 
 if __name__ == '__main__':
-    logdir = '/model/'
-    os.mkdir(logdir + 'checkpoint')
+    logdir = 'log/'
+    os.makedirs(logdir + 'checkpoint', exist_ok=True)
+    
+    # Auto-detect device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print('Using device:', device)
     
     # Load dataset
     splitRatio = 0.9
@@ -20,7 +24,7 @@ if __name__ == '__main__':
     vloader = DataLoader(dataset = validateDataset, batch_size = batchSize, shuffle = False)
     
     # Load model
-    model = CNNModel().to('cuda')
+    model = CNNModel().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr = 5e-4)
     
     # Train and validate
@@ -29,9 +33,9 @@ if __name__ == '__main__':
         model.train(True)
         torch.save(model.state_dict(), logdir + 'checkpoint/%d.pkl' % e)
         for i, d in enumerate(loader):
-            input_dict = {'observation': d[0].cuda(), 'action_mask': d[1].cuda()}
+            input_dict = {'observation': d[0].to(device), 'action_mask': d[1].to(device)}
             logits = model(input_dict)
-            loss = F.cross_entropy(logits, d[2].long().cuda())
+            loss = F.cross_entropy(logits, d[2].long().to(device))
             if i % 128 == 0:
                 print('Iteration %d/%d'%(i, len(trainDataset) // batchSize + 1), 'policy_loss', loss.item())
             optimizer.zero_grad()
@@ -41,10 +45,10 @@ if __name__ == '__main__':
         model.train(False)
         correct = 0
         for i, d in enumerate(vloader):
-            input_dict = {'observation': d[0].cuda(), 'action_mask': d[1].cuda()}
+            input_dict = {'observation': d[0].to(device), 'action_mask': d[1].to(device)}
             with torch.no_grad():
                 logits = model(input_dict)
                 pred = logits.argmax(dim = 1)
-                correct += torch.eq(pred, d[2].cuda()).sum().item()
+                correct += torch.eq(pred, d[2].to(device)).sum().item()
         acc = correct / len(validateDataset)
         print('Epoch', e + 1, 'Validate acc:', acc)

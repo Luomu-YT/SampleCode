@@ -46,7 +46,7 @@ if __name__ == '__main__':
         'ckpt_save_interval': 300,
         'ckpt_save_path': './model-test/', # 本地路径
         'max_iterations': 100000,          # 最大训练轮数
-        'save_interval': 1000               # 每100轮保存一次
+        'save_interval': 100               # 每100轮保存一次
     }
 
 
