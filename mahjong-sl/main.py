@@ -20,39 +20,24 @@ import sys
 
 if __name__ == '__main__':
     import os
-    
     model = CNNModel()
-    # Load checkpoint from Botzone user storage (data/ directory)
-    data_dir = 'data/model.pkl'
-    if os.path.exists(data_dir):
-        model.load_state_dict(torch.load(data_dir, map_location = torch.device('cpu')))
-        # Debug output to stderr to avoid interfering with Botzone protocol
-        import sys
-        sys.stderr.write('Loaded checkpoint from ' + data_dir + '\n')
-    else:
-        # Fallback: try to load from current directory (local testing)
-        pkl_files = [f for f in os.listdir('.') if f.endswith('.pkl')]
-        if pkl_files:
-            latest = max([int(f.split('.')[0]) for f in pkl_files])
-            model.load_state_dict(torch.load('%d.pkl' % latest, map_location = torch.device('cpu')))
-            import sys
-            sys.stderr.write('Loaded checkpoint from epoch ' + str(latest) + '\n')
-        else:
-            raise RuntimeError('No checkpoint found! Please upload model to data/ directory.')
+    # Load latest checkpoint from log/checkpoint/
+    checkpoint_dir = 'log/checkpoint/'
+    latest = max([int(f.split('.')[0]) for f in os.listdir(checkpoint_dir) if f.endswith('.pkl')])
+    data_dir = checkpoint_dir + '%d.pkl' % latest
+    model.load_state_dict(torch.load(data_dir, map_location = torch.device('cpu')))
     model.train(False)
+    
+    # Initialize variables
+    seatWind = 0
+    agent = None
+    zimo = False
+    angang = None
+    
     input() # 1
     while True:
-        try:
-            request = input()
-        except EOFError:
-            break
-        while not request.strip():
-            try:
-                request = input()
-            except EOFError:
-                break
-        if not request.strip():
-            break
+        request = input()
+        while not request.strip(): request = input()
         request = request.split()
         if request[0] == '0':
             seatWind = int(request[1])
@@ -75,13 +60,6 @@ if __name__ == '__main__':
                 angang = response[1]
             elif response[0] == 'BuGang':
                 print('BUGANG %s' % response[1])
-            else:
-                # Model predicted Pass or other invalid action, fallback to first playable tile
-                valid_tiles = [k for k, v in agent.OFFSET_TILE.items() if (agent.OFFSET_ACT['Play'] + v) in agent.valid]
-                if valid_tiles:
-                    print('PLAY %s' % valid_tiles[0])
-                else:
-                    print('PASS')
         elif request[0] == '3':
             p = int(request[1])
             if request[2] == 'DRAW':
