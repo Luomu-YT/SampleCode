@@ -36,6 +36,9 @@ class Actor(Process):
         env = MahjongGBEnv(config = {'agent_clz': FeatureAgent})
         policies = {player : model for player in env.agent_names} # all four players use the latest model
         
+        # 用于统计最近10局的奖励
+        recent_rewards = []
+        
         for episode in range(self.config['episodes_per_actor']):
             # update model
             latest = model_pool.get_latest_model()
@@ -82,7 +85,26 @@ class Actor(Process):
                 for agent_name in rewards:
                     episode_data[agent_name]['reward'].append(rewards[agent_name])
                 obs = next_obs
-            print(self.name, 'Episode', episode, 'Model', latest['id'], 'Reward', rewards)
+            # 记录当前 Actor 对应的主玩家 (player_1) 的得分
+            # 注意：麻将是零和博弈，4家得分之和为0，不能取sum
+            # env.py 中 agent_names = ['player_1', 'player_2', 'player_3', 'player_4']
+            main_player_reward = rewards.get('player_1', 0)
+            recent_rewards.append(main_player_reward)
+            
+            # 每10局打印一次统计信息
+            if (episode + 1) % 10 == 0:
+                avg_reward = np.mean(recent_rewards) if recent_rewards else 0
+                best_reward = max(recent_rewards) if recent_rewards else 0
+                worst_reward = min(recent_rewards) if recent_rewards else 0
+                print('[%-8s] Episode %4d/%4d | Model %2d | Avg Reward: %7.2f | Best: %7.2f | Worst: %7.2f' % (
+                    self.name, episode + 1, self.config['episodes_per_actor'], 
+                    latest['id'], avg_reward, best_reward, worst_reward))
+                recent_rewards = []
+            else:
+                # 非统计轮次也打印简要信息（只显示主玩家得分）
+                print('[%-8s] Episode %4d/%4d | Model %2d | Main Player Reward: %.2f' % (
+                    self.name, episode + 1, self.config['episodes_per_actor'], 
+                    latest['id'], main_player_reward))
             
             # postprocessing episode data for each agent
             for agent_name, agent_data in episode_data.items():

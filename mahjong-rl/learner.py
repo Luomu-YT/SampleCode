@@ -25,6 +25,14 @@ class Learner(Process):
         device = torch.device(self.config['device'])
         model = CNNModel()
         
+        # load pretrained model if specified
+        pretrained_path = self.config.get('pretrained_model_path', None)
+        if pretrained_path:
+            state_dict = torch.load(pretrained_path, map_location='cpu')
+            # strict=False: SL 模型缺少 _value_branch，跳过以保留随机初始化
+            model.load_state_dict(state_dict, strict=False)
+            print('Loaded pretrained model from', pretrained_path)
+        
         # send to model pool
         model_pool.push(model.state_dict()) # push cpu-only tensor to model_pool
         model = model.to(device)
@@ -55,7 +63,15 @@ class Learner(Process):
                 advs = torch.tensor(batch['adv']).to(device)
                 targets = torch.tensor(batch['target']).to(device)
                 
-                print('Iteration %d, replay buffer in %d out %d' % (iterations, self.replay_buffer.stats['sample_in'], self.replay_buffer.stats['sample_out']))
+                # 记录当前buffer状态（在计算loss前记录，避免被训练覆盖）
+                buffer_in = self.replay_buffer.stats['sample_in']
+                buffer_out = self.replay_buffer.stats['sample_out']
+                
+                # 计算当前batch的奖励均值（用于监控）
+                batch_mean_reward = np.mean(batch['target'])
+                
+                print('[Learner] Iter %5d/%5d | Buffer: %6d/%6d | Batch Reward: %8.4f' % (
+                    iterations, max_iterations, buffer_out, buffer_in, batch_mean_reward))
                 
                 # calculate PPO loss
                 model.train(True) # Batch Norm training mode
@@ -77,6 +93,10 @@ class Learner(Process):
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
+                
+                # 打印训练损失（只打印最后一轮epoch的结果）
+                print('[Learner]          | Loss(Policy/Value/Entropy/Total): %10.6f / %10.6f / %10.6f / %10.6f' % (
+                    policy_loss.item(), value_loss.item(), entropy_loss.item(), loss.item()))
 
                 # push new model
                 model = model.to('cpu')
